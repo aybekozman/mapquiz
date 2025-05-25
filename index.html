@@ -175,33 +175,32 @@
 
     let questionLock = false;
 
-function askQuestion() {
-  if (questionLock) return;
-  questionLock = true;
+    function askQuestion() {
+      if (questionLock) return;
+      questionLock = true;
 
-  document.getElementById("confirm-btn").style.display = 'none';
-  if (lives <= 0 || timeLeft <= 0) {
-    endGame();
-    questionLock = false;
-    return;
-  }
+      document.getElementById("confirm-btn").style.display = 'none';
+      if (lives <= 0 || timeLeft <= 0) {
+        endGame();
+        questionLock = false;
+        return;
+      }
 
-  const randomIndex = Math.floor(Math.random() * countries.length);
-  currentCountry = countries[randomIndex].properties.name;
+      const randomIndex = Math.floor(Math.random() * countries.length);
+      currentCountry = countries[randomIndex].properties.name;
 
-  const centerDisplay = document.getElementById("center-display");
-  centerDisplay.innerText = `📍 ${currentCountry}`;
-  centerDisplay.style.backgroundColor = "rgba(0,0,0,0.7)";
-  centerDisplay.style.display = 'block';
+      const centerDisplay = document.getElementById("center-display");
+      centerDisplay.innerText = `📍 ${currentCountry}`;
+      centerDisplay.style.backgroundColor = "rgba(0,0,0,0.7)";
+      centerDisplay.style.display = 'block';
 
-  document.getElementById("country-display").textContent = `📍 Ülke: ${currentCountry}`;
+      document.getElementById("country-display").textContent = `📍 Ülke: ${currentCountry}`;
 
-  setTimeout(() => {
-    centerDisplay.style.display = 'none';
-    questionLock = false;
-  }, 2000);
-}
-
+      setTimeout(() => {
+        centerDisplay.style.display = 'none';
+        questionLock = false;
+      }, 2000);
+    }
 
     function updateStatusBar() {
       document.getElementById("status-bar").innerHTML = `❤️ x ${lives} &nbsp;&nbsp; ⏰ ${timeLeft}s &nbsp;&nbsp; ⭐ Skor: ${score}`;
@@ -243,6 +242,21 @@ function askQuestion() {
             }
           }).addTo(map);
 
+          // Yeni eklenen zoom geçişi:
+          const coords = correctFeature.geometry.coordinates;
+          let latlng = [0, 0];
+
+          if (correctFeature.geometry.type === "Polygon") {
+            latlng = L.latLng(coords[0][0][1], coords[0][0][0]);
+          } else if (correctFeature.geometry.type === "MultiPolygon") {
+            latlng = L.latLng(coords[0][0][0][1], coords[0][0][0][0]);
+          }
+
+          map.flyTo([0, 0], 2, { duration: 0.8 }); // önce uzaklaştır
+          setTimeout(() => {
+            map.flyTo(latlng, 4, { duration: 1.5 }); // sonra doğru ülkeye zoomla
+          }, 900);
+
           setTimeout(() => {
             map.removeLayer(correctHighlight);
           }, 2000);
@@ -264,35 +278,34 @@ function askQuestion() {
     });
 
     function startGame() {
-  if (timerId) clearInterval(timerId);
+      if (timerId) clearInterval(timerId);
 
-  score = 0;
-  lives = 3;
-  timeLeft = 60;
-  currentCountry = "";
-  selectedLayer = null;
+      score = 0;
+      lives = 3;
+      timeLeft = 60;
+      currentCountry = "";
+      selectedLayer = null;
 
-  document.getElementById("end-screen").style.display = "none";
-  document.getElementById("newgame-btn").style.display = "none";
-  document.getElementById("status-bar").style.display = "flex";
-  document.getElementById("confirm-btn").style.display = "none";
-  document.getElementById("country-display").textContent = "";
-  updateStatusBar();
+      document.getElementById("end-screen").style.display = "none";
+      document.getElementById("newgame-btn").style.display = "none";
+      document.getElementById("status-bar").style.display = "flex";
+      document.getElementById("confirm-btn").style.display = "none";
+      document.getElementById("country-display").textContent = "";
+      updateStatusBar();
 
-  setTimeout(() => {
-    askQuestion();
-  }, 200); // küçük gecikme ile çakışma riski azaltıldı
+      setTimeout(() => {
+        askQuestion();
+      }, 200);
 
-  timerId = setInterval(() => {
-    timeLeft--;
-    updateStatusBar();
-    if (timeLeft <= 0) {
-      clearInterval(timerId);
-      endGame("timeout");
+      timerId = setInterval(() => {
+        timeLeft--;
+        updateStatusBar();
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          endGame("timeout");
+        }
+      }, 1000);
     }
-  }, 1000);
-}
-
 
     function endGame(type) {
       document.getElementById("status-bar").style.display = "none";
