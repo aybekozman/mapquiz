@@ -6,27 +6,9 @@
   <title>Map Quiz</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      height: 100%;
-      width: 100%;
-      font-family: sans-serif;
-      background-color: #000;
-    }
-
-    #map {
-      height: 100%;
-      width: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; width: 100%; font-family: sans-serif; background-color: #000; }
+    #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 0; }
 
     .status-bar {
       position: absolute;
@@ -89,14 +71,10 @@
       text-align: center;
       padding: 12px 28px;
       border-radius: 12px;
-      background-color: rgba(0, 0, 0, 0.4); /* Saydam siyah arka plan */
+      background-color: rgba(0, 0, 0, 0.7);
       box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
       z-index: 9999;
       display: none;
-      pointer-events: none;
-      user-select: none;
-      transition: opacity 0.5s ease;
-      opacity: 0;
     }
 
     .fullscreen-end {
@@ -132,33 +110,6 @@
       margin-top: 5px;
       color: #ccc;
     }
-
-    @media (max-width: 600px) {
-      .status-bar {
-        flex-direction: column;
-        font-size: 1rem;
-        padding: 10px 16px;
-      }
-
-      #confirm-btn, #newgame-btn {
-        font-size: 1rem;
-        padding: 10px 20px;
-      }
-
-      #country-display {
-        font-size: 1.2rem;
-      }
-
-      #center-display {
-        font-size: 2rem;
-        padding: 10px 20px;
-      }
-
-      .fullscreen-end {
-        font-size: 1.5rem;
-        padding: 20px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -169,20 +120,32 @@
   <button id="newgame-btn">🔁 Yeniden Oyna</button>
   <div id="center-display"></div>
   <div class="fullscreen-end" id="end-screen"></div>
+  <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+  <audio id="wrong-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-geojson-vt/leaflet-geojson-vt.js"></script>
   <script>
-    let map = L.map('map').setView([20, 0], 2);
+    let map = L.map('map', {
+      minZoom: 2,
+      maxZoom: 5,
+      worldCopyJump: false,
+      maxBoundsViscosity: 1.0
+    }).setView([20, 0], 2);
+
+    map.setMaxBounds([[-90, -180], [90, 180]]);
     let score = 0, lives = 3, timeLeft = 60;
     let currentCountry = "";
     let selectedLayer = null;
     let countries = [];
-    let timerId;
+    let timerId = null;
+    let geoLayer;
+    let correctHighlight = null;
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OSM',
       subdomains: 'abcd',
+      noWrap: true,
+      continuousWorld: false,
       maxZoom: 5,
     }).addTo(map);
 
@@ -190,7 +153,7 @@
       .then(res => res.json())
       .then(data => {
         countries = data.features;
-        let geoLayer = L.geoJSON(data, {
+        geoLayer = L.geoJSON(data, {
           style: {
             color: "#444",
             fillColor: "#888",
@@ -210,103 +173,134 @@
         startGame();
       });
 
-    function showCountryNameTransition(name) {
-      let el = document.getElementById("center-display");
-      el.textContent = name;
-      el.style.opacity = 1;
-      el.style.display = "flex";
+    let questionLock = false;
 
-      setTimeout(() => {
-        el.style.opacity = 0;
-        setTimeout(() => {
-          el.style.display = "none";
-        }, 500);
-      }, 2000);
-    }
+function askQuestion() {
+  if (questionLock) return;
+  questionLock = true;
 
-    function askQuestion() {
-      document.getElementById("confirm-btn").style.display = 'none';
-      if (!countries.length) return;
-      let randomIndex = Math.floor(Math.random() * countries.length);
-      currentCountry = countries[randomIndex].properties.name;
-      document.getElementById("country-display").textContent = `Haritada göster: ${currentCountry}`;
-      // Ülke adını saydam kutu içinde 2 saniye göster
-      showCountryNameTransition(currentCountry);
-    }
+  document.getElementById("confirm-btn").style.display = 'none';
+  if (lives <= 0 || timeLeft <= 0) {
+    endGame();
+    questionLock = false;
+    return;
+  }
+
+  const randomIndex = Math.floor(Math.random() * countries.length);
+  currentCountry = countries[randomIndex].properties.name;
+
+  const centerDisplay = document.getElementById("center-display");
+  centerDisplay.innerText = `📍 ${currentCountry}`;
+  centerDisplay.style.backgroundColor = "rgba(0,0,0,0.7)";
+  centerDisplay.style.display = 'block';
+
+  document.getElementById("country-display").textContent = `📍 Ülke: ${currentCountry}`;
+
+  setTimeout(() => {
+    centerDisplay.style.display = 'none';
+    questionLock = false;
+  }, 2000);
+}
+
 
     function updateStatusBar() {
       document.getElementById("status-bar").innerHTML = `❤️ x ${lives} &nbsp;&nbsp; ⏰ ${timeLeft}s &nbsp;&nbsp; ⭐ Skor: ${score}`;
     }
 
-    function showCenterText(text, bgColor) {
-      let el = document.getElementById("center-display");
+    function showCenterText(text, bgColor, callback) {
+      const el = document.getElementById("center-display");
       el.textContent = text;
       el.style.backgroundColor = bgColor;
-      el.style.display = "flex";
-      clearTimeout(el._hideTimeout);
-      el._hideTimeout = setTimeout(() => {
+      el.style.display = "block";
+
+      setTimeout(() => {
         el.style.display = "none";
+        if (callback) callback();
       }, 2000);
     }
 
     document.getElementById("confirm-btn").addEventListener("click", () => {
       if (!selectedLayer || !currentCountry) return;
 
-      let selectedName = selectedLayer.feature.properties.name;
+      const selectedName = selectedLayer.feature.properties.name;
+      const correctFeature = countries.find(f => f.properties.name === currentCountry);
 
       if (selectedName === currentCountry) {
         score++;
-        showCenterText("✅ Doğru!", "rgba(0,128,0,0.7)");
+        document.getElementById("correct-sound").play();
+        showCenterText("✅ Doğru!", "rgba(0,128,0,0.7)", askQuestion);
       } else {
         lives--;
-        showCenterText("❌ Yanlış!", "rgba(220,20,60,0.7)");
+        document.getElementById("wrong-sound").play();
+
+        if (correctFeature) {
+          correctHighlight = L.geoJSON(correctFeature, {
+            style: {
+              fillColor: 'green',
+              fillOpacity: 0.8,
+              color: '#0f0',
+              weight: 2
+            }
+          }).addTo(map);
+
+          setTimeout(() => {
+            map.removeLayer(correctHighlight);
+          }, 2000);
+        }
+
+        showCenterText("❌ Yanlış!", "rgba(220,20,60,0.4)", askQuestion);
       }
 
-      if (selectedLayer && selectedLayer.setStyle) {
-        selectedLayer.setStyle({ fillColor: '#888', fillOpacity: 0.6 });
-      }
-
+      geoLayer.resetStyle(selectedLayer);
       selectedLayer = null;
       document.getElementById("confirm-btn").style.display = 'none';
       updateStatusBar();
 
       if (lives <= 0) endGame("lost");
-      else askQuestion();
     });
 
     document.getElementById("newgame-btn").addEventListener("click", () => {
-      clearInterval(timerId);
       startGame();
     });
 
     function startGame() {
-      score = 0;
-      lives = 3;
-      timeLeft = 60;
-      currentCountry = "";
-      document.getElementById("end-screen").style.display = "none";
-      document.getElementById("newgame-btn").style.display = "none";
-      document.getElementById("status-bar").style.display = "flex";
-      document.getElementById("confirm-btn").style.display = "none";
-      document.getElementById("country-display").textContent = "";
-      updateStatusBar();
-      askQuestion();
+  if (timerId) clearInterval(timerId);
 
-      timerId = setInterval(() => {
-        timeLeft--;
-        updateStatusBar();
-        if (timeLeft <= 0) {
-          clearInterval(timerId);
-          endGame("timeout");
-        }
-      }, 1000);
+  score = 0;
+  lives = 3;
+  timeLeft = 60;
+  currentCountry = "";
+  selectedLayer = null;
+
+  document.getElementById("end-screen").style.display = "none";
+  document.getElementById("newgame-btn").style.display = "none";
+  document.getElementById("status-bar").style.display = "flex";
+  document.getElementById("confirm-btn").style.display = "none";
+  document.getElementById("country-display").textContent = "";
+  updateStatusBar();
+
+  setTimeout(() => {
+    askQuestion();
+  }, 200); // küçük gecikme ile çakışma riski azaltıldı
+
+  timerId = setInterval(() => {
+    timeLeft--;
+    updateStatusBar();
+    if (timeLeft <= 0) {
+      clearInterval(timerId);
+      endGame("timeout");
     }
+  }, 1000);
+}
+
 
     function endGame(type) {
       document.getElementById("status-bar").style.display = "none";
       document.getElementById("confirm-btn").style.display = "none";
       document.getElementById("country-display").textContent = "";
-      let endScreen = document.getElementById("end-screen");
+      document.getElementById("newgame-btn").style.display = "block";
+
+      const endScreen = document.getElementById("end-screen");
       endScreen.style.display = "block";
       endScreen.innerHTML = type === "lost"
         ? `😢 Kaybettiniz<small>Tüm canlar tükendi</small><button onclick="startGame()">🔁 Yeniden Oyna</button>`
