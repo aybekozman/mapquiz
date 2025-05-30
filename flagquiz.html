@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MapQuiz - Bayrak Testi</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+    body, html {
+      height: 100%;
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #2196f3, #0d47a1);
+      font-family: 'Poppins', sans-serif;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    header {
+      width: 100%;
+      padding: 1rem 0;
+      background: rgba(0,0,0,0.3);
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.4rem;
+      letter-spacing: 0.05em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+
+    main {
+      margin-top: 80px;
+      width: 90%;
+      max-width: 480px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    #flag-img {
+         width: 200px;
+         height: 130px;
+         object-fit: contain;
+         border-radius: 12px;
+         border: 4px solid white;
+         margin: 0 auto 2rem auto; /* Ortalamak için margin left-right auto ve alt boşluk artırıldı */
+         display: block; /* img’nin tam ortada olması için block yapıldı */
+         box-shadow: 0 0 20px rgba(255,255,255,0.7);
+         background: white;
+    }
+
+    #question-text {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 1.5rem;
+    }
+
+    button.option-btn {
+      padding: 14px 0;
+      font-size: 1.25rem;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #42a5f5, #1565c0);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 5px 15px rgba(33, 150, 243, 0.5);
+      transition: background 0.3s ease, transform 0.15s ease;
+      user-select: none;
+    }
+
+    button.option-btn:hover {
+      background: linear-gradient(135deg, #64b5f6, #1e88e5);
+      transform: translateY(-2px);
+    }
+
+    button.option-btn.correct {
+      background: #4caf50 !important;
+      box-shadow: 0 5px 15px rgba(76,175,80,0.7);
+      cursor: default;
+    }
+
+    button.option-btn.wrong {
+      background: #e53935 !important;
+      box-shadow: 0 5px 15px rgba(229,57,53,0.7);
+      cursor: default;
+    }
+
+    #status-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #bbdefb;
+      user-select: none;
+    }
+
+    #center-display {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      height: 2.5rem;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255,255,255,0.7);
+    }
+
+    #newgame-btn {
+    padding: 14px 28px;
+    font-size: 1.25rem;
+    background: #4caf50;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    display: none;
+    box-shadow: 0 5px 15px rgba(76,175,80,0.6);
+    transition: background 0.3s ease;
+    margin-top: 3rem; /* Burada butonu daha aşağı indirdik */
+    }
+    #newgame-btn:hover {
+      background: #388e3c;
+    }
+
+    #sound-toggle {
+      position: fixed;
+      top: 15px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      border: 2px solid #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      z-index: 101;
+    }
+
+    #sound-toggle:hover {
+      background: rgba(255,255,255,0.35);
+    }
+
+    #sound-icon {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+
+  </style>
+</head>
+<body>
+  <header>MapQuiz - Bayrak Testi</header>
+
+  <div id="sound-toggle" role="button" aria-label="Ses açma kapama" tabindex="0">
+    <svg id="sound-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 9v6h4l5 5V4L7 9H3z"/>
+      <path id="mute-path" d="M16.5 12a4.5 4.5 0 0 1-4.5 4.5v-9a4.5 4.5 0 0 1 4.5 4.5z" fill="none" stroke="white" stroke-width="2" style="display:none"/>
+      <line id="mute-cross1" x1="18" y1="6" x2="22" y2="10" stroke="white" stroke-width="2" style="display:none"/>
+      <line id="mute-cross2" x1="22" y1="6" x2="18" y2="10" stroke="white" stroke-width="2" style="display:none"/>
+    </svg>
+  </div>
+
+  <main role="main" aria-live="polite" aria-atomic="true">
+    <div id="status-bar">
+      <div>❤️ Can: <span id="lives">3</span></div>
+      <div>⏰ Süre: <span id="time-left">60</span>s</div>
+      <div>⭐ Skor: <span id="score">0</span></div>
+    </div>
+
+    <div id="center-display" aria-live="assertive"></div>
+
+    <img id="flag-img" src="" alt="Bayrak resmi" />
+
+    <div id="question-text">Bu bayrak hangi ülkeye ait?</div>
+
+    <div class="options" role="list" aria-label="Seçenekler">
+      <!-- Seçenekler JS ile gelecek -->
+    </div>
+
+    <button id="newgame-btn" aria-label="Yeniden Oyna">🔁 Yeniden Oyna</button>
+
+    <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+    <audio id="wrong-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
+  </main>
+
+  <script>
+    // Bayrak ve ülke verileri (örnek olarak popüler ve orta seviye ülkeler, URL'ler placeholder)
+    // Gerçek bayrak URL'leri için güvenilir CDN veya kendi dosyan kullanılabilir.
+    const countriesData = [
+      { name: "Afghanistan", flag: "https://flagcdn.com/af.svg" },
+        { name: "Albania", flag: "https://flagcdn.com/al.svg" },
+        { name: "Algeria", flag: "https://flagcdn.com/dz.svg" },
+        { name: "Andorra", flag: "https://flagcdn.com/ad.svg" },
+        { name: "Angola", flag: "https://flagcdn.com/ao.svg" },
+        { name: "Antigua and Barbuda", flag: "https://flagcdn.com/ag.svg" },
+        { name: "Argentina", flag: "https://flagcdn.com/ar.svg" },
+        { name: "Armenia", flag: "https://flagcdn.com/am.svg" },
+        { name: "Australia", flag: "https://flagcdn.com/au.svg" },
+        { name: "Austria", flag: "https://flagcdn.com/at.svg" },
+        { name: "Azerbaijan", flag: "https://flagcdn.com/az.svg" },
+        { name: "Bahamas", flag: "https://flagcdn.com/bs.svg" },
+        { name: "Bahrain", flag: "https://flagcdn.com/bh.svg" },
+        { name: "Bangladesh", flag: "https://flagcdn.com/bd.svg" },
+        { name: "Barbados", flag: "https://flagcdn.com/bb.svg" },
+        { name: "Belarus", flag: "https://flagcdn.com/by.svg" },
+        { name: "Belgium", flag: "https://flagcdn.com/be.svg" },
+        { name: "Belize", flag: "https://flagcdn.com/bz.svg" },
+        { name: "Benin", flag: "https://flagcdn.com/bj.svg" },
+        { name: "Bhutan", flag: "https://flagcdn.com/bt.svg" },
+        { name: "Bolivia", flag: "https://flagcdn.com/bo.svg" },
+        { name: "Bosnia and Herzegovina", flag: "https://flagcdn.com/ba.svg" },
+        { name: "Botswana", flag: "https://flagcdn.com/bw.svg" },
+        { name: "Brazil", flag: "https://flagcdn.com/br.svg" },
+        { name: "Brunei", flag: "https://flagcdn.com/bn.svg" },
+        { name: "Bulgaria", flag: "https://flagcdn.com/bg.svg" },
+        { name: "Burkina Faso", flag: "https://flagcdn.com/bf.svg" },
+        { name: "Burundi", flag: "https://flagcdn.com/bi.svg" },
+        { name: "Cambodia", flag: "https://flagcdn.com/kh.svg" },
+        { name: "Cameroon", flag: "https://flagcdn.com/cm.svg" },
+        { name: "Canada", flag: "https://flagcdn.com/ca.svg" },
+        { name: "Cape Verde", flag: "https://flagcdn.com/cv.svg" },
+        { name: "Central African Republic", flag: "https://flagcdn.com/cf.svg" },
+        { name: "Chad", flag: "https://flagcdn.com/td.svg" },
+        { name: "Chile", flag: "https://flagcdn.com/cl.svg" },
+        { name: "China", flag: "https://flagcdn.com/cn.svg" },
+        { name: "Colombia", flag: "https://flagcdn.com/co.svg" },
+        { name: "Comoros", flag: "https://flagcdn.com/km.svg" },
+        { name: "Congo (Brazzaville)", flag: "https://flagcdn.com/cg.svg" },
+        { name: "Congo (Kinshasa)", flag: "https://flagcdn.com/cd.svg" },
+        { name: "Costa Rica", flag: "https://flagcdn.com/cr.svg" },
+        { name: "Croatia", flag: "https://flagcdn.com/hr.svg" },
+        { name: "Cuba", flag: "https://flagcdn.com/cu.svg" },
+        { name: "Cyprus", flag: "https://flagcdn.com/cy.svg" },
+        { name: "Czech Republic", flag: "https://flagcdn.com/cz.svg" },
+        { name: "Denmark", flag: "https://flagcdn.com/dk.svg" },
+        { name: "Djibouti", flag: "https://flagcdn.com/dj.svg" },
+        { name: "Dominica", flag: "https://flagcdn.com/dm.svg" },
+        { name: "Dominican Republic", flag: "https://flagcdn.com/do.svg" },
+        { name: "Ecuador", flag: "https://flagcdn.com/ec.svg" },
+        { name: "Egypt", flag: "https://flagcdn.com/eg.svg" },
+        { name: "El Salvador", flag: "https://flagcdn.com/sv.svg" },
+        { name: "Equatorial Guinea", flag: "https://flagcdn.com/gq.svg" },
+        { name: "Eritrea", flag: "https://flagcdn.com/er.svg" },
+        { name: "Estonia", flag: "https://flagcdn.com/ee.svg" },
+        { name: "Eswatini", flag: "https://flagcdn.com/sz.svg" },
+        { name: "Ethiopia", flag: "https://flagcdn.com/et.svg" },
+        { name: "Fiji", flag: "https://flagcdn.com/fj.svg" },
+        { name: "Finland", flag: "https://flagcdn.com/fi.svg" },
+        { name: "France", flag: "https://flagcdn.com/fr.svg" },
+        { name: "Gabon", flag: "https://flagcdn.com/ga.svg" },
+        { name: "Gambia", flag: "https://flagcdn.com/gm.svg" },
+        { name: "Georgia", flag: "https://flagcdn.com/ge.svg" },
+        { name: "Germany", flag: "https://flagcdn.com/de.svg" },
+        { name: "Ghana", flag: "https://flagcdn.com/gh.svg" },
+        { name: "Greece", flag: "https://flagcdn.com/gr.svg" },
+        { name: "Grenada", flag: "https://flagcdn.com/gd.svg" },
+        { name: "Guatemala", flag: "https://flagcdn.com/gt.svg" },
+        { name: "Guinea", flag: "https://flagcdn.com/gn.svg" },
+        { name: "Guinea-Bissau", flag: "https://flagcdn.com/gw.svg" },
+        { name: "Guyana", flag: "https://flagcdn.com/gy.svg" },
+        { name: "Haiti", flag: "https://flagcdn.com/ht.svg" },
+        { name: "Honduras", flag: "https://flagcdn.com/hn.svg" },
+        { name: "Hungary", flag: "https://flagcdn.com/hu.svg" },
+        { name: "Iceland", flag: "https://flagcdn.com/is.svg" },
+        { name: "India", flag: "https://flagcdn.com/in.svg" },
+        { name: "Indonesia", flag: "https://flagcdn.com/id.svg" },
+        { name: "Iran", flag: "https://flagcdn.com/ir.svg" },
+        { name: "Iraq", flag: "https://flagcdn.com/iq.svg" },
+        { name: "Ireland", flag: "https://flagcdn.com/ie.svg" },
+        { name: "Israel", flag: "https://flagcdn.com/il.svg" },
+        { name: "Italy", flag: "https://flagcdn.com/it.svg" },
+        { name: "Jamaica", flag: "https://flagcdn.com/jm.svg" },
+        { name: "Japan", flag: "https://flagcdn.com/jp.svg" },
+        { name: "Jordan", flag: "https://flagcdn.com/jo.svg" },
+        { name: "Kazakhstan", flag: "https://flagcdn.com/kz.svg" },
+        { name: "Kenya", flag: "https://flagcdn.com/ke.svg" },
+        { name: "Kiribati", flag: "https://flagcdn.com/ki.svg" },
+        { name: "Kuwait", flag: "https://flagcdn.com/kw.svg" },
+        { name: "Kyrgyzstan", flag: "https://flagcdn.com/kg.svg" },
+        { name: "Laos", flag: "https://flagcdn.com/la.svg" },
+        { name: "Latvia", flag: "https://flagcdn.com/lv.svg" },
+        { name: "Lebanon", flag: "https://flagcdn.com/lb.svg" },
+        { name: "Lesotho", flag: "https://flagcdn.com/ls.svg" },
+        { name: "Liberia", flag: "https://flagcdn.com/lr.svg" },
+        { name: "Libya", flag: "https://flagcdn.com/ly.svg" },
+        { name: "Liechtenstein", flag: "https://flagcdn.com/li.svg" },
+        { name: "Lithuania", flag: "https://flagcdn.com/lt.svg" },
+        { name: "Luxembourg", flag: "https://flagcdn.com/lu.svg" },
+        { name: "Madagascar", flag: "https://flagcdn.com/mg.svg" },
+        { name: "Malawi", flag: "https://flagcdn.com/mw.svg" },
+        { name: "Malaysia", flag: "https://flagcdn.com/my.svg" },
+        { name: "Maldives", flag: "https://flagcdn.com/mv.svg" },
+        { name: "Mali", flag: "https://flagcdn.com/ml.svg" },
+        { name: "Malta", flag: "https://flagcdn.com/mt.svg" },
+        { name: "Marshall Islands", flag: "https://flagcdn.com/mh.svg" },
+        { name: "Mauritania", flag: "https://flagcdn.com/mr.svg" },
+        { name: "Mauritius", flag: "https://flagcdn.com/mu.svg" },
+        { name: "Mexico", flag: "https://flagcdn.com/mx.svg" },
+        { name: "Micronesia", flag: "https://flagcdn.com/fm.svg" },
+        { name: "Moldova", flag: "https://flagcdn.com/md.svg" },
+        { name: "Monaco", flag: "https://flagcdn.com/mc.svg" },
+        { name: "Mongolia", flag: "https://flagcdn.com/mn.svg" },
+        { name: "Montenegro", flag: "https://flagcdn.com/me.svg" },
+        { name: "Morocco", flag: "https://flagcdn.com/ma.svg" },
+        { name: "Mozambique", flag: "https://flagcdn.com/mz.svg" },
+        { name: "Myanmar", flag: "https://flagcdn.com/mm.svg" },
+        { name: "Namibia", flag: "https://flagcdn.com/na.svg" },
+        { name: "Nauru", flag: "https://flagcdn.com/nr.svg" },
+        { name: "Nepal", flag: "https://flagcdn.com/np.svg" },
+        { name: "Netherlands", flag: "https://flagcdn.com/nl.svg" },
+        { name: "New Zealand", flag: "https://flagcdn.com/nz.svg" },
+        { name: "Nicaragua", flag: "https://flagcdn.com/ni.svg" },
+        { name: "Niger", flag: "https://flagcdn.com/ne.svg" },
+        { name: "Nigeria", flag: "https://flagcdn.com/ng.svg" },
+        { name: "North Korea", flag: "https://flagcdn.com/kp.svg" },
+        { name: "North Macedonia", flag: "https://flagcdn.com/mk.svg" },
+        { name: "Norway", flag: "https://flagcdn.com/no.svg" },
+        { name: "Oman", flag: "https://flagcdn.com/om.svg" },
+        { name: "Pakistan", flag: "https://flagcdn.com/pk.svg" },
+        { name: "Palau", flag: "https://flagcdn.com/pw.svg" },
+        { name: "Palestine", flag: "https://flagcdn.com/ps.svg" },
+        { name: "Panama", flag: "https://flagcdn.com/pa.svg" },
+        { name: "Papua New Guinea", flag: "https://flagcdn.com/pg.svg" },
+        { name: "Paraguay", flag: "https://flagcdn.com/py.svg" },
+        { name: "Peru", flag: "https://flagcdn.com/pe.svg" },
+        { name: "Philippines", flag: "https://flagcdn.com/ph.svg" },
+        { name: "Poland", flag: "https://flagcdn.com/pl.svg" },
+        { name: "Portugal", flag: "https://flagcdn.com/pt.svg" },
+        { name: "Qatar", flag: "https://flagcdn.com/qa.svg" },
+        { name: "Romania", flag: "https://flagcdn.com/ro.svg" },
+        { name: "Russia", flag: "https://flagcdn.com/ru.svg" },
+        { name: "Rwanda", flag: "https://flagcdn.com/rw.svg" },
+        { name: "Saint Kitts and Nevis", flag: "https://flagcdn.com/kn.svg" },
+        { name: "Saint Lucia", flag: "https://flagcdn.com/lc.svg" },
+        { name: "Saint Vincent and the Grenadines", flag: "https://flagcdn.com/vc.svg" },
+        { name: "Samoa", flag: "https://flagcdn.com/ws.svg" },
+        { name: "San Marino", flag: "https://flagcdn.com/sm.svg" },
+        { name: "Sao Tome and Principe", flag: "https://flagcdn.com/st.svg" },
+        { name: "Saudi Arabia", flag: "https://flagcdn.com/sa.svg" },
+        { name: "Senegal", flag: "https://flagcdn.com/sn.svg" },
+        { name: "Serbia", flag: "https://flagcdn.com/rs.svg" },
+        { name: "Seychelles", flag: "https://flagcdn.com/sc.svg" },
+        { name: "Sierra Leone", flag: "https://flagcdn.com/sl.svg" },
+        { name: "Singapore", flag: "https://flagcdn.com/sg.svg" },
+        { name: "Slovakia", flag: "https://flagcdn.com/sk.svg" },
+        { name: "Slovenia", flag: "https://flagcdn.com/si.svg" },
+        { name: "Solomon Islands", flag: "https://flagcdn.com/sb.svg" },
+        { name: "Somalia", flag: "https://flagcdn.com/so.svg" },
+        { name: "South Africa", flag: "https://flagcdn.com/za.svg" },
+        { name: "South Korea", flag: "https://flagcdn.com/kr.svg" },
+        { name: "South Sudan", flag: "https://flagcdn.com/ss.svg" },
+        { name: "Spain", flag: "https://flagcdn.com/es.svg" },
+        { name: "Sri Lanka", flag: "https://flagcdn.com/lk.svg" },
+        { name: "Sudan", flag: "https://flagcdn.com/sd.svg" },
+        { name: "Suriname", flag: "https://flagcdn.com/sr.svg" },
+        { name: "Sweden", flag: "https://flagcdn.com/se.svg" },
+        { name: "Switzerland", flag: "https://flagcdn.com/ch.svg" },
+        { name: "Syria", flag: "https://flagcdn.com/sy.svg" },
+        { name: "Taiwan", flag: "https://flagcdn.com/tw.svg" },
+        { name: "Tajikistan", flag: "https://flagcdn.com/tj.svg" },
+        { name: "Tanzania", flag: "https://flagcdn.com/tz.svg" },
+        { name: "Thailand", flag: "https://flagcdn.com/th.svg" },
+        { name: "Togo", flag: "https://flagcdn.com/tg.svg" },
+        { name: "Tonga", flag: "https://flagcdn.com/to.svg" },
+        { name: "Trinidad and Tobago", flag: "https://flagcdn.com/tt.svg" },
+        { name: "Tunisia", flag: "https://flagcdn.com/tn.svg" },
+        { name: "Turkey", flag: "https://flagcdn.com/tr.svg" },
+        { name: "Turkmenistan", flag: "https://flagcdn.com/tm.svg" },
+        { name: "Tuvalu", flag: "https://flagcdn.com/tv.svg" },
+        { name: "Uganda", flag: "https://flagcdn.com/ug.svg" },
+        { name: "Ukraine", flag: "https://flagcdn.com/ua.svg" },
+        { name: "United Arab Emirates", flag: "https://flagcdn.com/ae.svg" },
+        { name: "United Kingdom", flag: "https://flagcdn.com/gb.svg" },
+        { name: "United States", flag: "https://flagcdn.com/us.svg" },
+        { name: "Uruguay", flag: "https://flagcdn.com/uy.svg" },
+        { name: "Uzbekistan", flag: "https://flagcdn.com/uz.svg" },
+        { name: "Vanuatu", flag: "https://flagcdn.com/vu.svg" },
+        { name: "Vatican City", flag: "https://flagcdn.com/va.svg" },
+        { name: "Venezuela", flag: "https://flagcdn.com/ve.svg" },
+        { name: "Vietnam", flag: "https://flagcdn.com/vn.svg" },
+        { name: "Yemen", flag: "https://flagcdn.com/ye.svg" },
+        { name: "Zambia", flag: "https://flagcdn.com/zm.svg" },
+        { name: "Zimbabwe", flag: "https://flagcdn.com/zw.svg" }
+    ];
+
+    let lives, timeLeft, score;
+    let currentQuestion = null;
+    let timerId = null;
+    let soundOn = true;
+
+    const livesEl = document.getElementById('lives');
+    const timeLeftEl = document.getElementById('time-left');
+    const scoreEl = document.getElementById('score');
+    const centerDisplay = document.getElementById('center-display');
+    const flagImg = document.getElementById('flag-img');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.querySelector('.options');
+    const newGameBtn = document.getElementById('newgame-btn');
+    const correctSound = document.getElementById('correct-sound');
+    const wrongSound = document.getElementById('wrong-sound');
+    const soundToggle = document.getElementById('sound-toggle');
+    const mutePath = document.getElementById('mute-path');
+    const muteCross1 = document.getElementById('mute-cross1');
+    const muteCross2 = document.getElementById('mute-cross2');
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function startGame() {
+      lives = 3;
+      timeLeft = 60;
+      score = 0;
+      updateStatus();
+      newGameBtn.style.display = 'none';
+      optionsContainer.innerHTML = '';
+      centerDisplay.textContent = '';
+      flagImg.style.display = 'block';
+      questionText.style.display = 'block';
+
+      nextQuestion();
+      startTimer();
+    }
+
+    function updateStatus() {
+      livesEl.textContent = lives;
+      timeLeftEl.textContent = timeLeft;
+      scoreEl.textContent = score;
+    }
+
+    function startTimer() {
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        timeLeft--;
+        updateStatus();
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function nextQuestion() {
+      centerDisplay.textContent = '';
+      optionsContainer.innerHTML = '';
+
+      // Seçilen ülkeyi rastgele seç
+      const remainingCountries = countriesData.filter(c => !c.asked);
+      if (remainingCountries.length === 0) {
+        endGame();
+        return;
+      }
+
+      currentQuestion = remainingCountries[Math.floor(Math.random() * remainingCountries.length)];
+      currentQuestion.asked = true;
+
+      // Bayrak göster (soru bayrak ise)
+      flagImg.src = currentQuestion.flag;
+      flagImg.alt = `${currentQuestion.name} bayrağı`;
+
+      // Soru metni (bu örnekte sadece "Bu bayrak hangi ülkeye ait?" olacak)
+      questionText.textContent = 'Bu bayrak hangi ülkeye ait?';
+
+      // Doğru cevap ve 3 yanlış cevap seç (toplam 4 seçenek)
+      const options = [currentQuestion];
+      const otherCountries = countriesData.filter(c => c !== currentQuestion);
+      shuffleArray(otherCountries);
+      options.push(...otherCountries.slice(0, 3));
+      shuffleArray(options);
+
+      options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = option.name;
+        btn.onclick = () => handleAnswer(option);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(selectedOption) {
+      if (!currentQuestion) return; // oyun bitti ise
+
+      const buttons = optionsContainer.querySelectorAll('button.option-btn');
+      buttons.forEach(btn => btn.disabled = true);
+
+      if (selectedOption === currentQuestion) {
+        // Doğru
+        score += 10;
+        centerDisplay.textContent = '👍 Doğru!';
+        playSound('correct');
+      } else {
+        // Yanlış
+        lives--;
+        centerDisplay.textContent = '❌ Yanlış!';
+        playSound('wrong');
+      }
+      updateStatus();
+
+      if (lives <= 0) {
+        endGame();
+        return;
+      }
+
+      // Doğruysa bir sonraki soruya geçiş, yanlışsa biraz bekleyip devam
+      setTimeout(() => {
+        centerDisplay.textContent = '';
+        nextQuestion();
+      }, 1200);
+    }
+
+    function endGame() {
+      clearInterval(timerId);
+      currentQuestion = null;
+      centerDisplay.textContent = `Oyun Bitti! Skorunuz: ${score} ⭐`;
+      flagImg.style.display = 'none';
+      questionText.style.display = 'none';
+      optionsContainer.innerHTML = '';
+      newGameBtn.style.display = 'inline-block';
+    }
+
+    function playSound(type) {
+      if (!soundOn) return;
+      if (type === 'correct') correctSound.play();
+      else if (type === 'wrong') wrongSound.play();
+    }
+
+    // Ses açma kapama toggle
+    soundToggle.addEventListener('click', () => {
+      soundOn = !soundOn;
+      updateSoundIcon();
+    });
+    soundToggle.addEventListener('keypress', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        soundOn = !soundOn;
+        updateSoundIcon();
+      }
+    });
+    function updateSoundIcon() {
+      if (soundOn) {
+        mutePath.style.display = 'none';
+        muteCross1.style.display = 'none';
+        muteCross2.style.display = 'none';
+      } else {
+        mutePath.style.display = 'inline';
+        muteCross1.style.display = 'inline';
+        muteCross2.style.display = 'inline';
+      }
+    }
+
+    newGameBtn.addEventListener('click', () => {
+      // Tüm ülkelerin sormasını temizle
+      countriesData.forEach(c => c.asked = false);
+      startGame();
+    });
+
+    // Başlangıç
+    countriesData.forEach(c => c.asked = false);
+    updateSoundIcon();
+    startGame();
+
+  </script>
+</body>
+</html>

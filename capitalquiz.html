@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Başkent Testi</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+    body, html {
+      height: 100%;
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #2196f3, #0d47a1);
+      font-family: 'Poppins', sans-serif;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    header {
+      width: 100%;
+      padding: 1rem 0;
+      background: rgba(0,0,0,0.3);
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.4rem;
+      letter-spacing: 0.05em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+
+    main {
+      margin-top: 80px;
+      width: 90%;
+      max-width: 480px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    #question-text {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    button.option-btn {
+      padding: 14px 0;
+      font-size: 1.25rem;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #42a5f5, #1565c0);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 5px 15px rgba(33, 150, 243, 0.5);
+      transition: background 0.3s ease, transform 0.15s ease;
+      user-select: none;
+    }
+
+    button.option-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #64b5f6, #1e88e5);
+      transform: translateY(-2px);
+    }
+
+    button.option-btn.correct {
+      background: #4caf50 !important;
+      box-shadow: 0 5px 15px rgba(76,175,80,0.7);
+      cursor: default;
+    }
+
+    button.option-btn.wrong {
+      background: #e53935 !important;
+      box-shadow: 0 5px 15px rgba(229,57,53,0.7);
+      cursor: default;
+    }
+
+    #status-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #bbdefb;
+      user-select: none;
+    }
+
+    #center-display {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      height: 2rem;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255,255,255,0.7);
+      pointer-events: none;
+    }
+
+    #newgame-btn {
+      padding: 14px 28px;
+      font-size: 1.25rem;
+      background: #4caf50;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 5px 15px rgba(76,175,80,0.6);
+      transition: background 0.3s ease;
+      margin-top: 3rem;
+    }
+    #newgame-btn:hover {
+      background: #388e3c;
+    }
+  </style>
+</head>
+<body>
+  <header>Başkent Testi</header>
+  <main>
+    <div id="status-bar">
+      <div>Doğru: <span id="correct-count">0</span></div>
+      <div>Yanlış: <span id="wrong-count">0</span></div>
+    </div>
+    <div id="center-display"></div>
+    <div id="question-text">Ülke adı</div>
+    <div class="options" id="options-container"></div>
+    <button id="newgame-btn">Yeni Oyun</button>
+  </main>
+
+  <script>
+    const countries = [
+      { name: "Afganistan", capital: "Kabil" },
+      { name: "Arnavutluk", capital: "Tiran" },
+      { name: "Cezayir", capital: "Cezayir" },
+      { name: "Andorra", capital: "Andorra la Vella" },
+      { name: "Angola", capital: "Luanda" },
+      { name: "Antigua ve Barbuda", capital: "Saint John's" },
+      { name: "Arjantin", capital: "Buenos Aires" },
+      { name: "Ermenistan", capital: "Erivan" },
+      { name: "Avustralya", capital: "Canberra" },
+      { name: "Avusturya", capital: "Viyana" },
+      { name: "Azerbaycan", capital: "Bakü" },
+      { name: "Bahamalar", capital: "Nassau" },
+      { name: "Bahreyn", capital: "Manama" },
+      { name: "Bangladeş", capital: "Dakha" },
+      { name: "Barbados", capital: "Bridgetown" },
+      { name: "Belarus", capital: "Minsk" },
+      { name: "Belçika", capital: "Brüksel" },
+      { name: "Belize", capital: "Belmopan" },
+      { name: "Benin", capital: "Porto-Novo" },
+      { name: "Bhutan", capital: "Thimphu" },
+      { name: "Bolivya", capital: "Sucre" },
+      { name: "Bosna-Hersek", capital: "Saraybosna" },
+      { name: "Botsvana", capital: "Gaborone" },
+      { name: "Brezilya", capital: "Brezilya" },
+      { name: "Brunei", capital: "Bandar Seri Begawan" },
+      { name: "Bulgaristan", capital: "Sofya" },
+      { name: "Burkina Faso", capital: "Ouagadougou" },
+      { name: "Burundi", capital: "Gitega" },
+      { name: "Kamboçya", capital: "Phnom Penh" },
+      { name: "Kamerun", capital: "Yaoundé" },
+      { name: "Kanada", capital: "Ottawa" },
+      { name: "Yeşil Burun Adaları", capital: "Praia" },
+      { name: "Orta Afrika Cumhuriyeti", capital: "Bangui" },
+      { name: "Çad", capital: "N’Djamena" },
+      { name: "Şili", capital: "Santiago" },
+      { name: "Çin", capital: "Pekin" },
+      { name: "Kolombiya", capital: "Bogota" },
+      { name: "Komorlar", capital: "Moroni" },
+      { name: "Kongo Cumhuriyeti", capital: "Brazzaville" },
+      { name: "Kongo Demokratik Cumhuriyeti", capital: "Kinşasa" },
+      { name: "Kosta Rika", capital: "San José" },
+      { name: "Hırvatistan", capital: "Zagreb" },
+      { name: "Küba", capital: "Havana" },
+      { name: "Kıbrıs", capital: "Lefkoşa" },
+      { name: "Çekya", capital: "Prag" },
+      { name: "Danimarka", capital: "Kopenhag" },
+      { name: "Cibuti", capital: "Cibuti" },
+      { name: "Dominika", capital: "Roseau" },
+      { name: "Dominik Cumhuriyeti", capital: "Santo Domingo" },
+      { name: "Ekvador", capital: "Quito" },
+      { name: "Mısır", capital: "Kahire" },
+      { name: "El Salvador", capital: "San Salvador" },
+      { name: "Ekvator Ginesi", capital: "Malabo" },
+      { name: "Eritre", capital: "Asmara" },
+      { name: "Estonya", capital: "Tallinn" },
+      { name: "Esvatini", capital: "Mbabane" },
+      { name: "Etiyopya", capital: "Addis Ababa" },
+      { name: "Fiji", capital: "Suva" },
+      { name: "Finlandiya", capital: "Helsinki" },
+      { name: "Fransa", capital: "Paris" },
+      { name: "Gabon", capital: "Libreville" },
+      { name: "Gambiya", capital: "Banjul" },
+      { name: "Gürcistan", capital: "Tiflis" },
+      { name: "Almanya", capital: "Berlin" },
+      { name: "Gana", capital: "Accra" },
+      { name: "Yunanistan", capital: "Atina" },
+      { name: "Grenada", capital: "St. George's" },
+      { name: "Guatemala", capital: "Guatemala" },
+      { name: "Gine", capital: "Conakry" },
+      { name: "Gine-Bissau", capital: "Bissau" },
+      { name: "Guyana", capital: "Georgetown" },
+      { name: "Haiti", capital: "Port-au-Prince" },
+      { name: "Honduras", capital: "Tegucigalpa" },
+      { name: "Macaristan", capital: "Budapeşte" },
+      { name: "İzlanda", capital: "Reykjavik" },
+      { name: "Hindistan", capital: "Yeni Delhi" },
+      { name: "Endonezya", capital: "Cakarta" },
+      { name: "İran", capital: "Tahran" },
+      { name: "Irak", capital: "Bağdat" },
+      { name: "İrlanda", capital: "Dublin" },
+      { name: "İsrail", capital: "Kudüs" },
+      { name: "İtalya", capital: "Roma" },
+      { name: "Jamaika", capital: "Kingston" },
+      { name: "Japonya", capital: "Tokyo" },
+      { name: "Ürdün", capital: "Amman" },
+      { name: "Kazakistan", capital: "Nur-Sultan" },
+      { name: "Kenya", capital: "Nairobi" },
+      { name: "Kiribati", capital: "Tarawa" },
+      { name: "Kuveyt", capital: "Kuveyt Şehri" },
+      { name: "Kırgızistan", capital: "Bişkek" },
+      { name: "Laos", capital: "Vientiane" },
+      { name: "Letonya", capital: "Riga" },
+      { name: "Lübnan", capital: "Beyrut" },
+      { name: "Lesoto", capital: "Maseru" },
+      { name: "Liberya", capital: "Monrovia" },
+      { name: "Libya", capital: "Trablus" },
+      { name: "Lihtenştayn", capital: "Vaduz" },
+      { name: "Litvanya", capital: "Vilnius" },
+      { name: "Lüksemburg", capital: "Lüksemburg" },
+      { name: "Madagaskar", capital: "Antananarivo" },
+      { name: "Malavi", capital: "Lilongwe" },
+      { name: "Malezya", capital: "Kuala Lumpur" },
+      { name: "Maldivler", capital: "Malé" },
+      { name: "Mali", capital: "Bamako" },
+      { name: "Malta", capital: "Valletta" },
+      { name: "Marshall Adaları", capital: "Majuro" },
+      { name: "Moritanya", capital: "Nuakşot" },
+      { name: "Mauritius", capital: "Port Louis" },
+      { name: "Meksika", capital: "Meksiko" },
+      { name: "Mikronezya", capital: "Palikir" },
+      { name: "Moldova", capital: "Kişinev" },
+      { name: "Monako", capital: "Monako" },
+      { name: "Moğolistan", capital: "Ulan Batur" },
+      { name: "Karadağ", capital: "Podgorica" },
+      { name: "Fas", capital: "Rabıt" },
+      { name: "Mozambik", capital: "Maputo" },
+      { name: "Myanmar", capital: "Naypyidaw" },
+      { name: "Namibya", capital: "Windhoek" },
+      { name: "Nauru", capital: "Yaren" },
+      { name: "Nepal", capital: "Katmandu" },
+      { name: "Hollanda", capital: "Amsterdam" },
+      { name: "Yeni Zelanda", capital: "Wellington" },
+      { name: "Nikaragua", capital: "Managua" },
+      { name: "Nijer", capital: "Niamey" },
+      { name: "Nijerya", capital: "Abuja" },
+      { name: "Kuzey Kore", capital: "Pyongyang" },
+      { name: "Norveç", capital: "Oslo" },
+      { name: "Umman", capital: "Maskat" },
+      { name: "Pakistan", capital: "İslamabad" },
+      { name: "Palau", capital: "Ngerulmud" },
+      { name: "Panama", capital: "Panama" },
+      { name: "Papua Yeni Gine", capital: "Port Moresby" },
+      { name: "Paraguay", capital: "Asunción" },
+      { name: "Peru", capital: "Lima" },
+      { name: "Filipinler", capital: "Manila" },
+      { name: "Polonya", capital: "Varşova" },
+      { name: "Portekiz", capital: "Lizbon" },
+      { name: "Katar", capital: "Doha" },
+      { name: "Romanya", capital: "Bükreş" },
+      { name: "Rusya", capital: "Moskova" },
+      { name: "Ruanda", capital: "Kigali" },
+      { name: "Saint Kitts ve Nevis", capital: "Basseterre" },
+      { name: "Saint Lucia", capital: "Castries" },
+      { name: "Saint Vincent ve Grenadinler", capital: "Kingstown" },
+      { name: "Samoa", capital: "Apia" },
+      { name: "San Marino", capital: "San Marino" },
+      { name: "São Tomé ve Príncipe", capital: "São Tomé" },
+      { name: "Suudi Arabistan", capital: "Riyad" },
+      { name: "Senegal", capital: "Dakar" },
+      { name: "Sırbistan", capital: "Belgrad" },
+      { name: "Seyşeller", capital: "Victoria" },
+      { name: "Sierra Leone", capital: "Freetown" },
+      { name: "Singapur", capital: "Singapur" },
+      { name: "Slovakya", capital: "Bratislava" },
+      { name: "Slovenya", capital: "Ljubljana" },
+      { name: "Solomon Adaları", capital: "Honiara" },
+      { name: "Somali", capital: "Mogadişu" },
+      { name: "Güney Afrika", capital: "Pretoria" },
+      { name: "Güney Kore", capital: "Seul" },
+      { name: "Güney Sudan", capital: "Cuba" },
+      { name: "İspanya", capital: "Madrid" },
+      { name: "Sri Lanka", capital: "Sri Jayawardenepura Kotte" },
+      { name: "Sudan", capital: "Hartum" },
+      { name: "Surinam", capital: "Paramaribo" },
+      { name: "İsveç", capital: "Stockholm" },
+      { name: "İsviçre", capital: "Bern" },
+      { name: "Suriye", capital: "Şam" },
+      { name: "Tayvan", capital: "Taypei" },
+      { name: "Tacikistan", capital: "Duşanbe" },
+      { name: "Tanzanya", capital: "Dodoma" },
+      { name: "Tayland", capital: "Bangkok" },
+      { name: "Togo", capital: "Lome" },
+      { name: "Tonga", capital: "Nuku'alofa" },
+      { name: "Trinidad ve Tobago", capital: "Port of Spain" },
+      { name: "Tunus", capital: "Tunus" },
+      { name: "Türkiye", capital: "Ankara" },
+      { name: "Türkmenistan", capital: "Aşkabat" },
+      { name: "Tuvalu", capital: "Funafuti" },
+      { name: "Uganda", capital: "Kampala" },
+      { name: "Ukrayna", capital: "Kiev" },
+      { name: "Birleşik Arap Emirlikleri", capital: "Abu Dabi" },
+      { name: "Birleşik Krallık", capital: "Londra" },
+      { name: "Amerika Birleşik Devletleri", capital: "Washington, D.C." },
+      { name: "Uruguay", capital: "Montevideo" },
+      { name: "Özbekistan", capital: "Taşkent" },
+      { name: "Vanuatu", capital: "Port Vila" },
+      { name: "Vatikán", capital: "Vatikan" },
+      { name: "Venezuela", capital: "Caracas" },
+      { name: "Vietnam", capital: "Hanoi" },
+      { name: "Yemen", capital: "Sana'a" },
+      { name: "Zambiya", capital: "Lusaka" },
+      { name: "Zimbabve", capital: "Harare" }
+    ];
+
+    let currentQuestion = null;
+    let correctCount = 0;
+    let wrongCount = 0;
+
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const correctCountSpan = document.getElementById('correct-count');
+    const wrongCountSpan = document.getElementById('wrong-count');
+    const centerDisplay = document.getElementById('center-display');
+    const newGameBtn = document.getElementById('newgame-btn');
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function startGame() {
+      correctCount = 0;
+      wrongCount = 0;
+      correctCountSpan.textContent = correctCount;
+      wrongCountSpan.textContent = wrongCount;
+      newGameBtn.style.display = 'none';
+      centerDisplay.textContent = '';
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      optionsContainer.innerHTML = '';
+      centerDisplay.textContent = '';
+
+      // Rastgele bir ülke seç
+      currentQuestion = countries[Math.floor(Math.random() * countries.length)];
+
+      questionText.textContent = `${currentQuestion.name} ülkesinin başkenti hangisidir?`;
+
+      // Doğru cevabı ve yanlış seçenekleri hazırla
+      let options = [currentQuestion.capital];
+
+      // Yanlış seçenek için 3 başkent seç
+      let capitalsPool = countries
+        .filter(c => c.capital !== currentQuestion.capital)
+        .map(c => c.capital);
+
+      shuffle(capitalsPool);
+      options = options.concat(capitalsPool.slice(0, 3));
+      shuffle(options);
+
+      options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.classList.add('option-btn');
+        btn.textContent = option;
+        btn.addEventListener('click', () => selectAnswer(btn, option));
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function selectAnswer(button, selected) {
+      // Tüm seçenek butonlarını devre dışı bırak
+      [...optionsContainer.children].forEach(btn => btn.disabled = true);
+
+      if (selected === currentQuestion.capital) {
+        button.classList.add('correct');
+        correctCount++;
+        correctCountSpan.textContent = correctCount;
+        centerDisplay.textContent = "Doğru!";
+        centerDisplay.style.color = "#4caf50";
+      } else {
+        button.classList.add('wrong');
+        wrongCount++;
+        wrongCountSpan.textContent = wrongCount;
+        centerDisplay.textContent = `Yanlış! Doğru cevap: ${currentQuestion.capital}`;
+        centerDisplay.style.color = "#e53935";
+
+        // Doğru cevabı işaretle
+        [...optionsContainer.children].forEach(btn => {
+          if (btn.textContent === currentQuestion.capital) {
+            btn.classList.add('correct');
+          }
+        });
+      }
+
+      // 1 saniye sonra yeni soruya geç
+      setTimeout(() => {
+        if (correctCount + wrongCount >= 15) {
+          endGame();
+        } else {
+          nextQuestion();
+        }
+      }, 1000);
+    }
+
+    function endGame() {
+      questionText.textContent = "Oyun Bitti!";
+      centerDisplay.textContent = `Doğru: ${correctCount}, Yanlış: ${wrongCount}`;
+      centerDisplay.style.color = "#fff";
+      optionsContainer.innerHTML = '';
+      newGameBtn.style.display = 'inline-block';
+    }
+
+    newGameBtn.addEventListener('click', () => {
+      startGame();
+    });
+
+    // Oyunu başlat
+    startGame();
+  </script>
+</body>
+</html>
