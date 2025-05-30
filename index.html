@@ -27,6 +27,18 @@
       z-index: 10;
     }
 
+    #best-score {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 1rem;
+      color: #ffd700;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px 16px;
+      border-radius: 10px;
+      z-index: 10;
+    }
+
     #country-display {
       position: absolute;
       top: 60px;
@@ -110,215 +122,315 @@
       margin-top: 5px;
       color: #ccc;
     }
+
+    #difficulty-menu {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -30%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      z-index: 9999;
+    }
+
+    #difficulty-menu h2 {
+      margin-bottom: 20px;
+    }
+
+    #difficulty-menu button {
+      margin: 10px;
+      padding: 12px 24px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #mute-btn {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      z-index: 10;
+      font-size: 1.4rem;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="country-display"></div>
-  <div class="status-bar" id="status-bar">❤️ x 3 &nbsp;&nbsp; ⏰ 60s &nbsp;&nbsp; ⭐ Skor: 0</div>
+  <div id="status-bar" class="status-bar">❤️ x 3 &nbsp;&nbsp; ⏰ 60s &nbsp;&nbsp; ⭐ Skor: 0</div>
+  <div id="best-score">🏆 En Yüksek Skor: 0</div>
   <button id="confirm-btn">✅ Onayla</button>
   <button id="newgame-btn">🔁 Yeniden Oyna</button>
   <div id="center-display"></div>
   <div class="fullscreen-end" id="end-screen"></div>
+  <div id="difficulty-menu">
+    <h2>Lütfen zorluk seviyesini seçiniz</h2>
+    <button onclick="selectDifficulty('easy')" style="background:#4caf50;">Kolay</button>
+    <button onclick="selectDifficulty('medium')" style="background:#ff9800;">Orta</button>
+    <button onclick="selectDifficulty('hard')" style="background:#f44336;">Zor</button>
+  </div>
+  <button id="mute-btn">🔊</button>
+
   <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
   <audio id="wrong-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+let map = L.map('map', {
+  minZoom: 2,
+  maxZoom: 5,
+  worldCopyJump: false,
+  maxBoundsViscosity: 1.0
+}).setView([20, 0], 2);
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    let map = L.map('map', {
-      minZoom: 2,
-      maxZoom: 5,
-      worldCopyJump: false,
-      maxBoundsViscosity: 1.0
-    }).setView([20, 0], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OSM',
+  subdomains: 'abcd',
+  noWrap: true,
+  continuousWorld: false,
+  maxZoom: 5,
+}).addTo(map);
 
-    map.setMaxBounds([[-90, -180], [90, 180]]);
-    let score = 0, lives = 3, timeLeft = 60;
-    let currentCountry = "";
-    let selectedLayer = null;
-    let countries = [];
-    let timerId = null;
-    let geoLayer;
-    let correctHighlight = null;
+map.setMaxBounds([[-90, -180], [90, 180]]);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OSM',
-      subdomains: 'abcd',
-      noWrap: true,
-      continuousWorld: false,
-      maxZoom: 5,
-    }).addTo(map);
+let score = 0, lives = 3, timeLeft = 60;
+let currentCountry = "";
+let selectedLayer = null;
+let countries = [];
+let usedCountries = [];
+let geoLayer;
+let timerId = null;
+let correctHighlight = null;
+let isMuted = localStorage.getItem("isMuted") === "true";
 
-    fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
-      .then(res => res.json())
-      .then(data => {
-        countries = data.features;
-        geoLayer = L.geoJSON(data, {
-          style: {
-            color: "#444",
-            fillColor: "#888",
-            weight: 1,
-            fillOpacity: 0.6,
-          },
-          onEachFeature: (feature, layer) => {
-            layer.on('click', () => {
-              if (selectedLayer) geoLayer.resetStyle(selectedLayer);
-              selectedLayer = layer;
-              layer.setStyle({ fillColor: 'blue', fillOpacity: 0.8 });
-              document.getElementById("confirm-btn").style.display = 'inline-block';
-            });
-          }
-        }).addTo(map);
+let bestScore = localStorage.getItem("bestScore") || 0;
 
-        startGame();
+document.getElementById("best-score").innerText = `🏆 En Yüksek Skor: ${bestScore}`;
+document.getElementById("mute-btn").textContent = isMuted ? "🔇" : "🔊";
+
+
+function updateStatusBar() {
+  document.getElementById("status-bar").innerHTML = `❤️ x ${lives} &nbsp;&nbsp; ⏰ ${timeLeft}s &nbsp;&nbsp; ⭐ Skor: ${score}`;
+}
+
+function showCenterText(text, bgColor, callback) {
+  const el = document.getElementById("center-display");
+  el.textContent = text;
+  el.style.backgroundColor = bgColor;
+  el.style.display = "block";
+  setTimeout(() => {
+    el.style.display = "none";
+    if (callback) callback();
+  }, 2000);
+}
+
+document.getElementById("mute-btn").addEventListener("click", () => {
+  isMuted = !isMuted;
+  document.getElementById("mute-btn").textContent = isMuted ? "🔇" : "🔊";
+  localStorage.setItem("isMuted", isMuted ? "true" : "false");
+});
+
+
+
+let difficulty = null;
+
+function selectDifficulty(level) {
+  difficulty = level;
+  document.getElementById("difficulty-menu").style.display = "none";
+
+  if (level === "easy") {
+    lives = 10;
+    timeLeft = 120;
+  } else if (level === "medium") {
+    lives = 5;
+    timeLeft = 90;
+  } else if (level === "hard") {
+    lives = 3;
+    timeLeft = 60;
+  }
+
+  fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+    .then(res => res.json())
+    .then(data => {
+      countries = data.features.filter(country => {
+        const name = country.properties.name;
+        if (level === "easy") {
+          return ["United States of America","South Africa","Spain","Saudi Arabia","Uruguay","Ukraine","Turkey","Portugal","Russia","North Korea","Netherlands", "New Zealand","Iran","Iceland","United Kingdom","Mexico","South Korea", "India","France", "Germany", "Italy", "Canada", "Australia", "Japan", "Brazil", "China","Antarctica"].includes(name);
+        } else if (level === "medium") {
+          return ["Albania","Egypt","Norway","Qatar","Slovakia","Syria","Tunisia","Thailand","Slovenia","Sweden","Republic of Serbia","Nigeria","Romania","Poland","Pakistan","Argentina","Peru","Hungary","Kazakhstan","Iraq","Israel","Mongolia","Macedonia","Indonesia","Ireland","Croatia","Finland","Morocco","Greenland","Afghanistan","Georgia","Ghana","Guinea", "Chile", "Colombia", "Thailand", "South Africa", "Morocco", "Iceland", "Algeria","Peru", "Vietnam","Armenia","Austria","Azerbaijan","Belgium","Bulgaria","Switzerland","Northern Cyprus","Cyprus","Czech Republic","Denmark","Libya"].includes(name);
+        } else {
+          return ["Bangladesh","Oman","Zambia","Zimbabwe","Somalia","Vietnam","Vanuatu","West Bank","Yemen","Uzbekistan","Venezuela","Suriname","Uganda","United Republic of Tanzania","Taiwan","Chad","Tajikistan","East Timor","Paraguay","Turkmenistan","Swaziland","Sudan","South Sudan","Senegal","Solomon Islands","Sierra Leone","El Salvador","Somaliland","Western Sahara","Rwanda","Papua New Guinea","Philippines","Eritrea","Panama","Nepal","Haiti","Guyana","Niger","Jamaica","Kosovo","Mozambique","Mauritania","Malawi","Malaysia","Namibia","New Caledonia","Mali","Malta","Myanmar","Montenegro","Moldova","Madagascar","Kuwait","Laos","Lesotho","Lithuania","Luxembourg","Lebanon","Liberia","Sri Lanka","Jordan","Kenya","Kyrgyzstan","Cambodia","Honduras","French Guiana","Fiji","Gabon","Guatemala","Estonia","Guinea Bissau","Equatorial Guinea","Gambia","Ethiopia","Ecuador", "Sri Lanka", "Nepal", "Mali", "Niger", "Togo", "Bhutan", "Laos", "Benin", "Burundi","Angola","French Southern and Antarctic Lands","Benin","Dominican Republic","Burkina Faso","The Bahamas","Bosnia and Herzegovina","Belarus","Belize","Bermuda","Bolivia","Brunei","Botswana","Central African Republic","Ivory Coast","Cameroon","Democratic Republic of the Congo","Republic of the Congo","Colombia","Costa Rica","Cuba"].includes(name);
+        }
       });
 
-    let questionLock = false;
-
-    function askQuestion() {
-      if (questionLock) return;
-      questionLock = true;
-
-      document.getElementById("confirm-btn").style.display = 'none';
-      if (lives <= 0 || timeLeft <= 0) {
-        endGame();
-        questionLock = false;
-        return;
-      }
-
-      const randomIndex = Math.floor(Math.random() * countries.length);
-      currentCountry = countries[randomIndex].properties.name;
-
-      const centerDisplay = document.getElementById("center-display");
-      centerDisplay.innerText = `📍 ${currentCountry}`;
-      centerDisplay.style.backgroundColor = "rgba(0,0,0,0.7)";
-      centerDisplay.style.display = 'block';
-
-      document.getElementById("country-display").textContent = `📍 Ülke: ${currentCountry}`;
-
-      setTimeout(() => {
-        centerDisplay.style.display = 'none';
-        questionLock = false;
-      }, 2000);
-    }
-
-    function updateStatusBar() {
-      document.getElementById("status-bar").innerHTML = `❤️ x ${lives} &nbsp;&nbsp; ⏰ ${timeLeft}s &nbsp;&nbsp; ⭐ Skor: ${score}`;
-    }
-
-    function showCenterText(text, bgColor, callback) {
-      const el = document.getElementById("center-display");
-      el.textContent = text;
-      el.style.backgroundColor = bgColor;
-      el.style.display = "block";
-
-      setTimeout(() => {
-        el.style.display = "none";
-        if (callback) callback();
-      }, 2000);
-    }
-
-    document.getElementById("confirm-btn").addEventListener("click", () => {
-      if (!selectedLayer || !currentCountry) return;
-
-      const selectedName = selectedLayer.feature.properties.name;
-      const correctFeature = countries.find(f => f.properties.name === currentCountry);
-
-      if (selectedName === currentCountry) {
-        score++;
-        document.getElementById("correct-sound").play();
-        showCenterText("✅ Doğru!", "rgba(0,128,0,0.7)", askQuestion);
-      } else {
-        lives--;
-        document.getElementById("wrong-sound").play();
-
-        if (correctFeature) {
-          correctHighlight = L.geoJSON(correctFeature, {
-            style: {
-              fillColor: 'green',
-              fillOpacity: 0.8,
-              color: '#0f0',
-              weight: 2
-            }
-          }).addTo(map);
-
-          // Yeni eklenen zoom geçişi:
-          const coords = correctFeature.geometry.coordinates;
-          let latlng = [0, 0];
-
-          if (correctFeature.geometry.type === "Polygon") {
-            latlng = L.latLng(coords[0][0][1], coords[0][0][0]);
-          } else if (correctFeature.geometry.type === "MultiPolygon") {
-            latlng = L.latLng(coords[0][0][0][1], coords[0][0][0][0]);
-          }
-
-          map.flyTo([0, 0], 2, { duration: 0.8 }); // önce uzaklaştır
-          setTimeout(() => {
-            map.flyTo(latlng, 4, { duration: 1.5 }); // sonra doğru ülkeye zoomla
-          }, 900);
-
-          setTimeout(() => {
-            map.removeLayer(correctHighlight);
-          }, 2000);
+      geoLayer = L.geoJSON(data, {
+        style: {
+          color: "#444",
+          fillColor: "#888",
+          weight: 1,
+          fillOpacity: 0.6,
+        },
+        onEachFeature: (feature, layer) => {
+          layer.on('click', () => {
+            if (selectedLayer) geoLayer.resetStyle(selectedLayer);
+            selectedLayer = layer;
+            layer.setStyle({ fillColor: 'blue', fillOpacity: 0.8 });
+            document.getElementById("confirm-btn").style.display = 'inline-block';
+          });
         }
+      }).addTo(map);
 
-        showCenterText("❌ Yanlış!", "rgba(220,20,60,0.4)", askQuestion);
-      }
-
-      geoLayer.resetStyle(selectedLayer);
-      selectedLayer = null;
-      document.getElementById("confirm-btn").style.display = 'none';
-      updateStatusBar();
-
-      if (lives <= 0) endGame("lost");
-    });
-
-    document.getElementById("newgame-btn").addEventListener("click", () => {
       startGame();
     });
+}
+function askQuestion() {
+  if (lives <= 0 || timeLeft <= 0) {
+    endGame(timeLeft <= 0 ? "timeout" : "lost");
+    return;
+  }
 
-    function startGame() {
-      if (timerId) clearInterval(timerId);
+  const availableCountries = countries.filter(c => !usedCountries.includes(c.properties.name));
+  if (availableCountries.length === 0) {
+    endGame("done");
+    return;
+  }
 
-      score = 0;
-      lives = 3;
-      timeLeft = 60;
-      currentCountry = "";
-      selectedLayer = null;
+  const randomIndex = Math.floor(Math.random() * availableCountries.length);
+  const selectedFeature = availableCountries[randomIndex];
+  currentCountry = selectedFeature.properties.name;
+  usedCountries.push(currentCountry);
 
-      document.getElementById("end-screen").style.display = "none";
-      document.getElementById("newgame-btn").style.display = "none";
-      document.getElementById("status-bar").style.display = "flex";
-      document.getElementById("confirm-btn").style.display = "none";
-      document.getElementById("country-display").textContent = "";
-      updateStatusBar();
+  document.getElementById("country-display").textContent = `📍 Ülke: ${currentCountry}`;
+
+  const centerDisplay = document.getElementById("center-display");
+  centerDisplay.textContent = `📍 ${currentCountry}`;
+  centerDisplay.style.display = 'block';
+
+  setTimeout(() => {
+    centerDisplay.style.display = 'none';
+  }, 2000);
+
+  document.getElementById("confirm-btn").style.display = 'none';
+}
+
+document.getElementById("confirm-btn").addEventListener("click", () => {
+  if (!selectedLayer || !currentCountry) return;
+
+  const selectedName = selectedLayer.feature.properties.name;
+  const correctFeature = countries.find(f => f.properties.name === currentCountry);
+
+  if (selectedName === currentCountry) {
+    score++;
+    if (!isMuted) document.getElementById("correct-sound").play();
+    showCenterText("✅ Doğru!", "rgba(0,128,0,0.7)", askQuestion);
+  } else {
+    lives--;
+    if (!isMuted) document.getElementById("wrong-sound").play();
+
+    if (correctFeature) {
+      correctHighlight = L.geoJSON(correctFeature, {
+        style: {
+          fillColor: 'green',
+          fillOpacity: 0.8,
+          color: '#0f0',
+          weight: 2
+        }
+      }).addTo(map);
+
+      const coords = correctFeature.geometry.coordinates;
+      let latlng = [0, 0];
+
+      if (correctFeature.geometry.type === "Polygon") {
+        latlng = L.latLng(coords[0][0][1], coords[0][0][0]);
+      } else if (correctFeature.geometry.type === "MultiPolygon") {
+        latlng = L.latLng(coords[0][0][0][1], coords[0][0][0][0]);
+      }
+
+      map.flyTo([0, 0], 2, { duration: 0.8 });
+      setTimeout(() => {
+        map.flyTo(latlng, 4, { duration: 1.5 });
+      }, 900);
 
       setTimeout(() => {
-        askQuestion();
-      }, 200);
-
-      timerId = setInterval(() => {
-        timeLeft--;
-        updateStatusBar();
-        if (timeLeft <= 0) {
-          clearInterval(timerId);
-          endGame("timeout");
-        }
-      }, 1000);
+        map.removeLayer(correctHighlight);
+      }, 2000);
     }
 
-    function endGame(type) {
-      document.getElementById("status-bar").style.display = "none";
-      document.getElementById("confirm-btn").style.display = "none";
-      document.getElementById("country-display").textContent = "";
-      document.getElementById("newgame-btn").style.display = "block";
+    showCenterText("❌ Yanlış!", "rgba(220,20,60,0.4)", askQuestion);
+  }
 
-      const endScreen = document.getElementById("end-screen");
-      endScreen.style.display = "block";
-      endScreen.innerHTML = type === "lost"
-        ? `😢 Kaybettiniz<small>Tüm canlar tükendi</small><button onclick="startGame()">🔁 Yeniden Oyna</button>`
-        : `⏱️ Süre Bitti<br>⭐ Skorunuz: ${score}<br><button onclick="startGame()">🔁 Yeniden Oyna</button>`;
+  geoLayer.resetStyle(selectedLayer);
+  selectedLayer = null;
+  document.getElementById("confirm-btn").style.display = 'none';
+  updateStatusBar();
+
+  if (lives <= 0) endGame("lost");
+});
+
+document.getElementById("newgame-btn").addEventListener("click", () => {
+  location.reload();
+});
+
+function startGame() {
+  if (timerId) clearInterval(timerId);
+
+  score = 0;
+  usedCountries = [];
+  selectedLayer = null;
+  currentCountry = "";
+
+  document.getElementById("end-screen").style.display = "none";
+  document.getElementById("newgame-btn").style.display = "none";
+  document.getElementById("status-bar").style.display = "flex";
+  document.getElementById("confirm-btn").style.display = "none";
+  document.getElementById("country-display").textContent = "";
+  updateStatusBar();
+
+  askQuestion();
+
+  timerId = setInterval(() => {
+    timeLeft--;
+    updateStatusBar();
+    if (timeLeft <= 0) {
+      clearInterval(timerId);
+      endGame("timeout");
     }
-  </script>
+  }, 1000);
+}
+
+function endGame(reason) {
+  clearInterval(timerId);
+  document.getElementById("status-bar").style.display = "none";
+  document.getElementById("confirm-btn").style.display = "none";
+  document.getElementById("country-display").textContent = "";
+  document.getElementById("newgame-btn").style.display = "block";
+
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem("bestScore", bestScore);
+    document.getElementById("best-score").textContent = `🏆 En Yüksek Skor: ${bestScore}`;
+  }
+
+  const endScreen = document.getElementById("end-screen");
+  endScreen.style.display = "block";
+
+  if (reason === "lost") {
+    endScreen.innerHTML = `😢 Kaybettiniz<br><small>Tüm canlar tükendi</small><button onclick="location.reload()">🔁 Yeniden Oyna</button>`;
+  } else if (reason === "timeout") {
+    endScreen.innerHTML = `⏱️ Süre Bitti<br>⭐ Skorunuz: ${score}<br><button onclick="location.reload()">🔁 Yeniden Oyna</button>`;
+  } else if (reason === "done") {
+    endScreen.innerHTML = `🎉 Tebrikler! Tüm ülkeleri bildiniz.<br>⭐ Skorunuz: ${score}<br><button onclick="location.reload()">🔁 Yeniden Oyna</button>`;
+  }
+}
+</script>
 </body>
 </html>
